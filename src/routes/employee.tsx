@@ -48,12 +48,15 @@ const inputClass =
 
 function EmployeePage() {
   const [fullName, setFullName] = useState("");
-  const [department, setDepartment] = useState("");
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<Category | "">("");
+  const [email, setEmail] = useState("");
+  const [department, setDepartment] = useState<Department | "">("");
   const [date, setDate] = useState("");
+  const [vendor, setVendor] = useState("");
+  const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  const [project, setProject] = useState("");
+  const [notes, setNotes] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [reference, setReference] = useState<string | null>(null);
