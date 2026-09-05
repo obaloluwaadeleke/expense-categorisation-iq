@@ -111,12 +111,15 @@ function EmployeePage() {
 
   function resetForm() {
     setFullName("");
+    setEmail("");
     setDepartment("");
-    setTitle("");
-    setAmount("");
-    setCategory("");
     setDate("");
+    setVendor("");
+    setAmount("");
     setDescription("");
+    setPaymentMethod("");
+    setProject("");
+    setNotes("");
     setReceipt(null);
     setReference(null);
   }
