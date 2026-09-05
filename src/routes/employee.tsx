@@ -6,13 +6,15 @@ import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
 import {
   APPROVAL_THRESHOLD,
-  CATEGORIES,
+  DEPARTMENTS,
+  PAYMENT_METHODS,
   MOCK_EXPENSES,
   YOUR_MAKE_READ_WEBHOOK,
   YOUR_MAKE_WEBHOOK_URL,
   formatNaira,
   generateReference,
-  type Category,
+  type Department,
+  type PaymentMethod,
 } from "@/lib/expense-data";
 
 // Webhooks used by this page (configure in src/lib/expense-data.ts):
@@ -46,13 +48,17 @@ const inputClass =
 
 function EmployeePage() {
   const [fullName, setFullName] = useState("");
-  const [department, setDepartment] = useState("");
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState<Category | "">("");
+  const [email, setEmail] = useState("");
+  const [department, setDepartment] = useState<Department | "">("");
   const [date, setDate] = useState("");
+  const [vendor, setVendor] = useState("");
+  const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
+  const [project, setProject] = useState("");
+  const [notes, setNotes] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [reference, setReference] = useState<string | null>(null);
 
@@ -64,17 +70,29 @@ function EmployeePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!receipt) {
+      setReceiptError("Please attach a receipt (image or PDF).");
+      return;
+    }
+    setReceiptError(null);
     setSubmitting(true);
     const ref = generateReference();
+    // Views elsewhere expect a display title — derive it from vendor/purpose.
+    const derivedTitle =
+      vendor.trim() || description.trim().slice(0, 60) || "Expense claim";
     const payload = {
       reference: ref,
       fullName,
+      email,
       department,
-      title,
+      title: derivedTitle,
+      vendor,
       amount: numericAmount,
-      category,
       date,
       description,
+      paymentMethod,
+      project: project || null,
+      notes: notes || null,
       receiptName: receipt?.name ?? null,
       status: "Pending",
     };
@@ -99,12 +117,15 @@ function EmployeePage() {
 
   function resetForm() {
     setFullName("");
+    setEmail("");
     setDepartment("");
-    setTitle("");
-    setAmount("");
-    setCategory("");
     setDate("");
+    setVendor("");
+    setAmount("");
     setDescription("");
+    setPaymentMethod("");
+    setProject("");
+    setNotes("");
     setReceipt(null);
     setReference(null);
   }
@@ -149,7 +170,7 @@ function EmployeePage() {
           <h2 className="text-base font-semibold text-card-foreground">New expense</h2>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="Full Name">
+            <Field label="Employee Name">
               <input
                 required
                 className={inputClass}
@@ -158,27 +179,50 @@ function EmployeePage() {
                 placeholder="Adaeze Nwosu"
               />
             </Field>
-            <Field label="Department">
+            <Field label="Employee Email">
               <input
+                required
+                type="email"
+                className={inputClass}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="adaeze@company.com"
+              />
+            </Field>
+            <Field label="Department">
+              <select
                 required
                 className={inputClass}
                 value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                placeholder="Sales"
+                onChange={(e) => setDepartment(e.target.value as Department)}
+              >
+                <option value="">Select a department</option>
+                {DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Expense Date">
+              <input
+                required
+                type="date"
+                className={inputClass}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
               />
             </Field>
-            <div className="sm:col-span-2">
-              <Field label="Expense Title">
-                <input
-                  required
-                  className={inputClass}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Client visit flight to Abuja"
-                />
-              </Field>
-            </div>
-            <Field label="Amount (₦)">
+            <Field label="Vendor / Supplier Name">
+              <input
+                required
+                className={inputClass}
+                value={vendor}
+                onChange={(e) => setVendor(e.target.value)}
+                placeholder="Arik Air"
+              />
+            </Field>
+            <Field label="Amount (NGN ₦)">
               <input
                 required
                 type="number"
@@ -190,31 +234,55 @@ function EmployeePage() {
                 placeholder="150000"
               />
             </Field>
-            <Field label="Category">
-              <select
-                required
-                className={inputClass}
-                value={category}
-                onChange={(e) => setCategory(e.target.value as Category)}
-              >
-                <option value="">Select a category</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+            <div className="sm:col-span-2">
+              <Field label="Purpose / Business Reason">
+                <textarea
+                  required
+                  rows={4}
+                  className={inputClass}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What was this expense for?"
+                />
+              </Field>
+            </div>
+            <div className="sm:col-span-2">
+              <span className="mb-1.5 block text-sm font-medium text-foreground">
+                Payment Method
+              </span>
+              <div className="grid gap-2 sm:grid-cols-4">
+                {PAYMENT_METHODS.map((m) => (
+                  <label
+                    key={m}
+                    className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
+                      paymentMethod === m
+                        ? "border-accent bg-accent/10 text-foreground"
+                        : "border-input text-muted-foreground hover:border-accent"
+                    }`}
+                  >
+                    <input
+                      required
+                      type="radio"
+                      name="paymentMethod"
+                      className="accent-accent"
+                      value={m}
+                      checked={paymentMethod === m}
+                      onChange={() => setPaymentMethod(m)}
+                    />
+                    {m}
+                  </label>
                 ))}
-              </select>
-            </Field>
-            <Field label="Date">
+              </div>
+            </div>
+            <Field label="Project / Client (optional)">
               <input
-                required
-                type="date"
                 className={inputClass}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                value={project}
+                onChange={(e) => setProject(e.target.value)}
+                placeholder="Q3 enterprise pitch"
               />
             </Field>
-            <Field label="Receipt (image or PDF, optional)">
+            <Field label="Receipt (image or PDF)">
               <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-input bg-secondary/50 px-3 py-2 text-sm text-muted-foreground transition hover:border-accent">
                 <Upload className="h-4 w-4" />
                 <span className="truncate">{receipt ? receipt.name : "Choose file"}</span>
@@ -225,16 +293,18 @@ function EmployeePage() {
                   onChange={(e) => setReceipt(e.target.files?.[0] ?? null)}
                 />
               </label>
+              {receiptError && (
+                <span className="mt-1 block text-xs text-destructive">{receiptError}</span>
+              )}
             </Field>
             <div className="sm:col-span-2">
-              <Field label="Description">
+              <Field label="Additional Notes (optional)">
                 <textarea
-                  required
-                  rows={4}
+                  rows={3}
                   className={inputClass}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What was this expense for?"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add other context or clarification"
                 />
               </Field>
             </div>

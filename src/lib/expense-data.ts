@@ -17,6 +17,25 @@ export const CATEGORIES = [
   "Other",
 ] as const;
 
+export const DEPARTMENTS = [
+  "Marketing",
+  "Operations",
+  "Product",
+  "HR",
+  "Admin",
+  "Finance",
+  "IT",
+] as const;
+
+export const PAYMENT_METHODS = [
+  "Cash",
+  "Card",
+  "Bank Transfer",
+  "Personal Funds",
+] as const;
+
+export type Department = (typeof DEPARTMENTS)[number];
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export type Category = (typeof CATEGORIES)[number];
 export type Status = "Pending" | "Approved" | "Rejected";
 
@@ -24,12 +43,17 @@ export interface Expense {
   id: string;
   reference: string;
   fullName: string;
+  email?: string;
   department: string;
   title: string;
   amount: number;
   category: Category;
   date: string;
   description: string;
+  vendor?: string;
+  paymentMethod?: PaymentMethod;
+  project?: string;
+  notes?: string;
   receiptName?: string;
   status: Status;
   aiRecommendation: "Approve" | "Reject" | "Review";
