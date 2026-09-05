@@ -17,12 +17,10 @@ const UPDATE_WEBHOOK = YOUR_MAKE_UPDATE_WEBHOOK;
 type Search = { decision?: "approve" | "reject" };
 
 export const Route = createFileRoute("/manager/$id")({
-  validateSearch: (search: Record<string, unknown>): Search => ({
-    decision:
-      search["decision"] === "approve" || search["decision"] === "reject"
-        ? search["decision"]
-        : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): Search =>
+    search["decision"] === "approve" || search["decision"] === "reject"
+      ? { decision: search["decision"] }
+      : {},
   head: () => ({
     meta: [
       { title: "Expense Detail — ExpenseIQ Manager" },
