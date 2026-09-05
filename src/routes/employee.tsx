@@ -58,6 +58,7 @@ function EmployeePage() {
   const [project, setProject] = useState("");
   const [notes, setNotes] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [reference, setReference] = useState<string | null>(null);
 
@@ -69,6 +70,11 @@ function EmployeePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!receipt) {
+      setReceiptError("Please attach a receipt (image or PDF).");
+      return;
+    }
+    setReceiptError(null);
     setSubmitting(true);
     const ref = generateReference();
     // Views elsewhere expect a display title — derive it from vendor/purpose.
@@ -281,13 +287,15 @@ function EmployeePage() {
                 <Upload className="h-4 w-4" />
                 <span className="truncate">{receipt ? receipt.name : "Choose file"}</span>
                 <input
-                  required={!receipt}
                   type="file"
                   accept="image/*,application/pdf"
                   className="hidden"
                   onChange={(e) => setReceipt(e.target.files?.[0] ?? null)}
                 />
               </label>
+              {receiptError && (
+                <span className="mt-1 block text-xs text-destructive">{receiptError}</span>
+              )}
             </Field>
             <div className="sm:col-span-2">
               <Field label="Additional Notes (optional)">
