@@ -164,7 +164,7 @@ function EmployeePage() {
           <h2 className="text-base font-semibold text-card-foreground">New expense</h2>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="Full Name">
+            <Field label="Employee Name">
               <input
                 required
                 className={inputClass}
@@ -173,27 +173,50 @@ function EmployeePage() {
                 placeholder="Adaeze Nwosu"
               />
             </Field>
-            <Field label="Department">
+            <Field label="Employee Email">
               <input
+                required
+                type="email"
+                className={inputClass}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="adaeze@company.com"
+              />
+            </Field>
+            <Field label="Department">
+              <select
                 required
                 className={inputClass}
                 value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                placeholder="Sales"
+                onChange={(e) => setDepartment(e.target.value as Department)}
+              >
+                <option value="">Select a department</option>
+                {DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Expense Date">
+              <input
+                required
+                type="date"
+                className={inputClass}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
               />
             </Field>
-            <div className="sm:col-span-2">
-              <Field label="Expense Title">
-                <input
-                  required
-                  className={inputClass}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Client visit flight to Abuja"
-                />
-              </Field>
-            </div>
-            <Field label="Amount (₦)">
+            <Field label="Vendor / Supplier Name">
+              <input
+                required
+                className={inputClass}
+                value={vendor}
+                onChange={(e) => setVendor(e.target.value)}
+                placeholder="Arik Air"
+              />
+            </Field>
+            <Field label="Amount (NGN ₦)">
               <input
                 required
                 type="number"
@@ -205,35 +228,60 @@ function EmployeePage() {
                 placeholder="150000"
               />
             </Field>
-            <Field label="Category">
-              <select
-                required
-                className={inputClass}
-                value={category}
-                onChange={(e) => setCategory(e.target.value as Category)}
-              >
-                <option value="">Select a category</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+            <div className="sm:col-span-2">
+              <Field label="Purpose / Business Reason">
+                <textarea
+                  required
+                  rows={4}
+                  className={inputClass}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What was this expense for?"
+                />
+              </Field>
+            </div>
+            <div className="sm:col-span-2">
+              <span className="mb-1.5 block text-sm font-medium text-foreground">
+                Payment Method
+              </span>
+              <div className="grid gap-2 sm:grid-cols-4">
+                {PAYMENT_METHODS.map((m) => (
+                  <label
+                    key={m}
+                    className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition ${
+                      paymentMethod === m
+                        ? "border-accent bg-accent/10 text-foreground"
+                        : "border-input text-muted-foreground hover:border-accent"
+                    }`}
+                  >
+                    <input
+                      required
+                      type="radio"
+                      name="paymentMethod"
+                      className="accent-accent"
+                      value={m}
+                      checked={paymentMethod === m}
+                      onChange={() => setPaymentMethod(m)}
+                    />
+                    {m}
+                  </label>
                 ))}
-              </select>
-            </Field>
-            <Field label="Date">
+              </div>
+            </div>
+            <Field label="Project / Client (optional)">
               <input
-                required
-                type="date"
                 className={inputClass}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                value={project}
+                onChange={(e) => setProject(e.target.value)}
+                placeholder="Q3 enterprise pitch"
               />
             </Field>
-            <Field label="Receipt (image or PDF, optional)">
+            <Field label="Receipt (image or PDF)">
               <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-input bg-secondary/50 px-3 py-2 text-sm text-muted-foreground transition hover:border-accent">
                 <Upload className="h-4 w-4" />
                 <span className="truncate">{receipt ? receipt.name : "Choose file"}</span>
                 <input
+                  required={!receipt}
                   type="file"
                   accept="image/*,application/pdf"
                   className="hidden"
@@ -242,14 +290,13 @@ function EmployeePage() {
               </label>
             </Field>
             <div className="sm:col-span-2">
-              <Field label="Description">
+              <Field label="Additional Notes (optional)">
                 <textarea
-                  required
-                  rows={4}
+                  rows={3}
                   className={inputClass}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What was this expense for?"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add other context or clarification"
                 />
               </Field>
             </div>
