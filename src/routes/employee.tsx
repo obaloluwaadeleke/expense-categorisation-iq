@@ -6,13 +6,15 @@ import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
 import {
   APPROVAL_THRESHOLD,
-  CATEGORIES,
+  DEPARTMENTS,
+  PAYMENT_METHODS,
   MOCK_EXPENSES,
   YOUR_MAKE_READ_WEBHOOK,
   YOUR_MAKE_WEBHOOK_URL,
   formatNaira,
   generateReference,
-  type Category,
+  type Department,
+  type PaymentMethod,
 } from "@/lib/expense-data";
 
 // Webhooks used by this page (configure in src/lib/expense-data.ts):
