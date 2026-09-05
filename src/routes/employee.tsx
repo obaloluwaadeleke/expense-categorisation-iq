@@ -71,15 +71,22 @@ function EmployeePage() {
     e.preventDefault();
     setSubmitting(true);
     const ref = generateReference();
+    // Views elsewhere expect a display title — derive it from vendor/purpose.
+    const derivedTitle =
+      vendor.trim() || description.trim().slice(0, 60) || "Expense claim";
     const payload = {
       reference: ref,
       fullName,
+      email,
       department,
-      title,
+      title: derivedTitle,
+      vendor,
       amount: numericAmount,
-      category,
       date,
       description,
+      paymentMethod,
+      project: project || null,
+      notes: notes || null,
       receiptName: receipt?.name ?? null,
       status: "Pending",
     };
