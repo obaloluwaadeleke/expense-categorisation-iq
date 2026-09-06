@@ -47,21 +47,22 @@ export interface Expense {
   department: string;
   title: string;
   amount: number;
-  category: Category;
+  category: string;
   date: string;
   description: string;
   vendor?: string;
-  paymentMethod?: PaymentMethod;
+  paymentMethod?: string;
   project?: string;
   notes?: string;
   receiptName?: string;
   status: Status;
-  aiRecommendation: "Approve" | "Reject" | "Review";
-  aiSummary: string;
-  categoryDetected: Category;
-  policyFlag: string;
+  aiRecommendation?: string;
+  aiSummary?: string;
+  categoryDetected?: string;
+  policyFlag?: string;
   managerComment?: string;
 }
+
 
 export function formatNaira(amount: number) {
   return "₦" + amount.toLocaleString("en-NG", { maximumFractionDigits: 2 });
