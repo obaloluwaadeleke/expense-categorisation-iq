@@ -1,18 +1,14 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { AiBadge, HighBadge, StatusBadge } from "@/components/expense/StatusBadge";
-import {
-  APPROVAL_THRESHOLD,
-  MOCK_EXPENSES,
-  YOUR_MAKE_UPDATE_WEBHOOK,
-  formatNaira,
-} from "@/lib/expense-data";
-
-// Configure in src/lib/expense-data.ts
-const UPDATE_WEBHOOK = YOUR_MAKE_UPDATE_WEBHOOK;
+import { useRequireRole } from "@/hooks/useAuth";
+import { decideExpense, listExpenses } from "@/lib/expenses.functions";
+import { APPROVAL_THRESHOLD, formatNaira } from "@/lib/expense-data";
 
 type Search = { decision?: "approve" | "reject" };
 
@@ -34,6 +30,8 @@ export const Route = createFileRoute("/manager/$id")({
         property: "og:description",
         content: "Full expense detail with AI analysis and manager decision controls.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: ExpenseDetail,
@@ -43,11 +41,27 @@ function ExpenseDetail() {
   const { id } = Route.useParams();
   const { decision } = Route.useSearch();
   const navigate = useNavigate();
-  const expense = MOCK_EXPENSES.find((e) => e.id === id);
+  const auth = useRequireRole(["manager", "admin"]);
+  const queryClient = useQueryClient();
+  const fetchExpenses = useServerFn(listExpenses);
+  const sendDecisionFn = useServerFn(decideExpense);
+
+  const expensesQuery = useQuery({
+    queryKey: ["expenses", "all"],
+    enabled: Boolean(auth.session),
+    queryFn: () => fetchExpenses({ data: undefined }),
+  });
+
+  const expense = expensesQuery.data?.expenses.find((e) => e.id === id);
 
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<"Approved" | "Rejected" | null>(null);
+
+  if (expensesQuery.isLoading) {
+    return <AppShell title="Loading expense…">{null}</AppShell>;
+  }
 
   if (!expense) {
     return (
@@ -61,29 +75,18 @@ function ExpenseDetail() {
 
   async function sendDecision(outcome: "Approved" | "Rejected") {
     setSaving(true);
-    const payload = {
-      id,
-      reference: expense!.reference,
-      decision: outcome,
-      comment,
-      decidedAt: new Date().toISOString(),
-    };
+    setError(null);
     try {
-      if (UPDATE_WEBHOOK && !UPDATE_WEBHOOK.startsWith("YOUR_MAKE")) {
-        await fetch(UPDATE_WEBHOOK, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        console.info("Update webhook not configured — payload:", payload);
-      }
+      await sendDecisionFn({ data: { id, decision: outcome, comment } });
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      setDone(outcome);
+      setTimeout(() => navigate({ to: "/manager" }), 1200);
     } catch (err) {
-      console.error("Failed to send decision", err);
+      console.error("Failed to save decision", err);
+      setError("We couldn't save that decision. Please try again.");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setDone(outcome);
-    setTimeout(() => navigate({ to: "/manager" }), 1200);
   }
 
   return (
@@ -99,30 +102,36 @@ function ExpenseDetail() {
         <section className="rounded-xl border border-border bg-card p-6 shadow-card lg:col-span-2">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={done ?? expense.status} />
-            <AiBadge recommendation={expense.aiRecommendation} />
+            <AiBadge recommendation={expense.aiRecommendation ?? "Review"} />
             {expense.amount >= APPROVAL_THRESHOLD && <HighBadge />}
           </div>
 
           <dl className="mt-5 grid gap-4 sm:grid-cols-2">
             <Detail label="Submitter" value={expense.fullName} />
-            <Detail label="Department" value={expense.department} />
+            <Detail label="Email" value={expense.email ?? "—"} />
+            <Detail label="Department" value={expense.department || "—"} />
             <Detail label="Amount" value={formatNaira(expense.amount)} />
-            <Detail label="Category" value={expense.category} />
+            <Detail label="Vendor" value={expense.vendor || "—"} />
+            <Detail label="Payment method" value={expense.paymentMethod || "—"} />
+            <Detail label="Project / client" value={expense.project || "—"} />
             <Detail label="Date" value={expense.date} />
             <Detail label="Receipt" value={expense.receiptName ?? "No receipt attached"} />
             <div className="sm:col-span-2">
-              <Detail label="Description" value={expense.description} />
+              <Detail label="Purpose" value={expense.description || "—"} />
+            </div>
+            <div className="sm:col-span-2">
+              <Detail label="Additional notes" value={expense.notes || "—"} />
             </div>
           </dl>
 
           <div className="mt-6 rounded-lg border border-border bg-secondary/60 p-5">
             <h2 className="text-sm font-semibold text-foreground">AI analysis</h2>
             <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-              <Detail label="Category detected" value={expense.categoryDetected} />
-              <Detail label="Policy flag" value={expense.policyFlag} />
-              <Detail label="Recommendation" value={expense.aiRecommendation} />
+              <Detail label="Category detected" value={expense.categoryDetected ?? "—"} />
+              <Detail label="Policy flag" value={expense.policyFlag ?? "No flags recorded"} />
+              <Detail label="Recommendation" value={expense.aiRecommendation ?? "Review"} />
               <div className="sm:col-span-2">
-                <Detail label="AI summary" value={expense.aiSummary} />
+                <Detail label="AI summary" value={expense.aiSummary ?? "—"} />
               </div>
             </dl>
           </div>
@@ -147,6 +156,8 @@ function ExpenseDetail() {
               className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
             />
           </label>
+
+          {error ? <p className="mt-3 text-sm font-medium text-destructive">{error}</p> : null}
 
           {done ? (
             <p className="mt-4 rounded-md bg-secondary px-4 py-3 text-sm font-medium text-foreground">
