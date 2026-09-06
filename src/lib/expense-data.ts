@@ -43,25 +43,26 @@ export interface Expense {
   id: string;
   reference: string;
   fullName: string;
-  email?: string;
+  email?: string | undefined;
   department: string;
   title: string;
   amount: number;
   category: string;
   date: string;
   description: string;
-  vendor?: string;
-  paymentMethod?: string;
-  project?: string;
-  notes?: string;
-  receiptName?: string;
+  vendor?: string | undefined;
+  paymentMethod?: string | undefined;
+  project?: string | undefined;
+  notes?: string | undefined;
+  receiptName?: string | undefined;
   status: Status;
-  aiRecommendation?: string;
-  aiSummary?: string;
-  categoryDetected?: string;
-  policyFlag?: string;
-  managerComment?: string;
+  aiRecommendation?: string | undefined;
+  aiSummary?: string | undefined;
+  categoryDetected?: string | undefined;
+  policyFlag?: string | undefined;
+  managerComment?: string | undefined;
 }
+
 
 
 export function formatNaira(amount: number) {
