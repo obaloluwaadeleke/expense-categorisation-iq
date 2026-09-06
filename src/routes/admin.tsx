@@ -1,18 +1,15 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Download, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
-import {
-  CATEGORIES,
-  MOCK_EXPENSES,
-  YOUR_MAKE_READ_WEBHOOK,
-  formatNaira,
-} from "@/lib/expense-data";
+import { useRequireRole } from "@/hooks/useAuth";
+import { listExpenses } from "@/lib/expenses.functions";
+import { formatNaira } from "@/lib/expense-data";
 
-// Configure in src/lib/expense-data.ts
-const READ_WEBHOOK = YOUR_MAKE_READ_WEBHOOK;
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -36,8 +33,17 @@ export const Route = createFileRoute("/admin")({
 
 function AdminPage() {
   const [query, setQuery] = useState("");
-  // Mock data; replace with a fetch to READ_WEBHOOK once configured.
-  const expenses = MOCK_EXPENSES;
+  const auth = useRequireRole(["admin"]);
+  const fetchExpenses = useServerFn(listExpenses);
+
+  const expensesQuery = useQuery({
+    queryKey: ["expenses", "all"],
+    enabled: Boolean(auth.session),
+    queryFn: () => fetchExpenses({ data: undefined }),
+  });
+
+  const expenses = useMemo(() => expensesQuery.data?.expenses ?? [], [expensesQuery.data]);
+  const usingSampleData = expensesQuery.data?.source === "mock";
 
   const stats = useMemo(() => {
     const sum = (s: string) =>
@@ -55,10 +61,14 @@ function AdminPage() {
   }, [expenses]);
 
   const byCategory = useMemo(() => {
-    const rows = CATEGORIES.map((c) => ({
-      category: c,
-      total: expenses.filter((e) => e.category === c).reduce((a, e) => a + e.amount, 0),
-    })).filter((r) => r.total > 0);
+    const totals = new Map<string, number>();
+    for (const e of expenses) {
+      const key = e.category || "Uncategorised";
+      totals.set(key, (totals.get(key) ?? 0) + e.amount);
+    }
+    const rows = [...totals.entries()]
+      .map(([category, total]) => ({ category, total }))
+      .filter((r) => r.total > 0);
     const max = Math.max(...rows.map((r) => r.total), 1);
     return rows
       .sort((a, b) => b.total - a.total)
@@ -75,10 +85,13 @@ function AdminPage() {
   return (
     <AppShell
       title="Admin dashboard"
-      subtitle={`Company-wide expense overview.${
-        READ_WEBHOOK.startsWith("YOUR_MAKE") ? " Showing mock data." : ""
-      }`}
+      subtitle={
+        expensesQuery.isLoading
+          ? "Loading company-wide records…"
+          : `Company-wide expense overview.${usingSampleData ? " Showing sample data." : ""}`
+      }
     >
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Total spend" value={formatNaira(stats.total)} />
         <Stat label="Total approved" value={formatNaira(stats.approved)} tone="approved" />
