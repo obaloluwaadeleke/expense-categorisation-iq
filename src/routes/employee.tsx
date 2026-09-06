@@ -43,6 +43,11 @@ const inputClass =
   "w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30";
 
 function EmployeePage() {
+  const auth = useRequireRole(["employee", "manager", "admin"]);
+  const queryClient = useQueryClient();
+  const fetchExpenses = useServerFn(listExpenses);
+  const submitExpense = useServerFn(createExpense);
+
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [department, setDepartment] = useState<Department | "">("");
@@ -55,14 +60,37 @@ function EmployeePage() {
   const [notes, setNotes] = useState("");
   const [receipt, setReceipt] = useState<File | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [reference, setReference] = useState<string | null>(null);
 
   const numericAmount = Number(amount) || 0;
   const needsApproval = numericAmount >= APPROVAL_THRESHOLD;
 
-  // Populated from mock data; swap for a fetch to READ_WEBHOOK when configured.
-  const submissions = useMemo(() => MOCK_EXPENSES.slice(0, 5), []);
+  useEffect(() => {
+    if (auth.user?.email && !email) setEmail(auth.user.email);
+    const meta = auth.user?.user_metadata as
+      | { full_name?: string; department?: string }
+      | undefined;
+    if (meta?.full_name && !fullName) setFullName(meta.full_name);
+    if (meta?.department && !department) setDepartment(meta.department as Department);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.user]);
+
+  const expensesQuery = useQuery({
+    queryKey: ["expenses", "mine"],
+    enabled: Boolean(auth.session),
+    queryFn: () => fetchExpenses({ data: undefined }),
+  });
+
+  const submissions = expensesQuery.data?.expenses ?? [];
+  const usingSampleData = expensesQuery.data?.source === "mock";
+
+  const mutation = useMutation({
+    mutationFn: submitExpense,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    },
+  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,45 +99,33 @@ function EmployeePage() {
       return;
     }
     setReceiptError(null);
-    setSubmitting(true);
+    setFormError(null);
     const ref = generateReference();
-    // Views elsewhere expect a display title — derive it from vendor/purpose.
-    const derivedTitle =
-      vendor.trim() || description.trim().slice(0, 60) || "Expense claim";
-    const payload = {
-      reference: ref,
-      fullName,
-      email,
-      department,
-      title: derivedTitle,
-      vendor,
-      amount: numericAmount,
-      date,
-      description,
-      paymentMethod,
-      project: project || null,
-      notes: notes || null,
-      receiptName: receipt?.name ?? null,
-      status: "Pending",
-    };
-
     try {
-      if (POST_WEBHOOK && !POST_WEBHOOK.startsWith("YOUR_MAKE")) {
-        await fetch(POST_WEBHOOK, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        console.info("Webhook not configured — payload that would be sent:", payload);
-      }
+      await mutation.mutateAsync({
+        data: {
+          fullName,
+          department,
+          date,
+          vendor,
+          amount: numericAmount,
+          purpose: description,
+          paymentMethod,
+          project,
+          notes,
+          receiptName: receipt.name,
+          reference: ref,
+        },
+      });
+      setReference(ref);
     } catch (err) {
-      console.error("Failed to send expense to webhook", err);
+      console.error("Failed to save expense", err);
+      setFormError(
+        err instanceof Error ? err.message : "We couldn't save your expense. Please try again.",
+      );
     }
-
-    setSubmitting(false);
-    setReference(ref);
   }
+
 
   function resetForm() {
     setFullName("");
