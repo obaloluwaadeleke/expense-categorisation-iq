@@ -328,20 +328,29 @@ function EmployeePage() {
             </p>
           )}
 
+          {formError && (
+            <p className="mt-4 text-sm font-medium text-destructive">{formError}</p>
+          )}
+
           <button
             type="submit"
-            disabled={submitting}
+            disabled={mutation.isPending}
             className="mt-6 w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-60"
           >
-            {submitting ? "Submitting…" : "Submit expense"}
+            {mutation.isPending ? "Submitting…" : "Submit expense"}
           </button>
         </form>
 
         <section className="rounded-xl border border-border bg-card p-6 shadow-card lg:col-span-2">
           <h2 className="text-base font-semibold text-card-foreground">My submissions</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Reading from mock data{READ_WEBHOOK.startsWith("YOUR_MAKE") ? " (webhook not configured)" : ""}.
+            {expensesQuery.isLoading
+              ? "Loading your records…"
+              : usingSampleData
+                ? "Showing sample data until the expense database is configured."
+                : "Live from your expense database."}
           </p>
+
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-wide text-muted-foreground">
