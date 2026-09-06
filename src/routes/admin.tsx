@@ -1,18 +1,15 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { Download, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
-import {
-  CATEGORIES,
-  MOCK_EXPENSES,
-  YOUR_MAKE_READ_WEBHOOK,
-  formatNaira,
-} from "@/lib/expense-data";
+import { useRequireRole } from "@/hooks/useAuth";
+import { listExpenses } from "@/lib/expenses.functions";
+import { formatNaira } from "@/lib/expense-data";
 
-// Configure in src/lib/expense-data.ts
-const READ_WEBHOOK = YOUR_MAKE_READ_WEBHOOK;
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
