@@ -1,27 +1,23 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Upload } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
+import { useRequireRole } from "@/hooks/useAuth";
+import { createExpense, listExpenses } from "@/lib/expenses.functions";
 import {
   APPROVAL_THRESHOLD,
   DEPARTMENTS,
   PAYMENT_METHODS,
-  MOCK_EXPENSES,
-  YOUR_MAKE_READ_WEBHOOK,
-  YOUR_MAKE_WEBHOOK_URL,
   formatNaira,
   generateReference,
   type Department,
   type PaymentMethod,
 } from "@/lib/expense-data";
 
-// Webhooks used by this page (configure in src/lib/expense-data.ts):
-//   POST -> YOUR_MAKE_WEBHOOK_URL
-//   READ -> YOUR_MAKE_READ_WEBHOOK
-const POST_WEBHOOK = YOUR_MAKE_WEBHOOK_URL;
-const READ_WEBHOOK = YOUR_MAKE_READ_WEBHOOK;
 
 export const Route = createFileRoute("/employee")({
   head: () => ({
