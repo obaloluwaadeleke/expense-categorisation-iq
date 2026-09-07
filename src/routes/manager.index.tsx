@@ -96,28 +96,38 @@ function ManagerQueue() {
             </p>
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <Link
-                to="/manager/$id"
-                params={{ id: e.id }}
-                search={{ decision: "approve" }}
-                className="rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90"
+              <button
+                type="button"
+                disabled={decideMutation.isPending}
+                onClick={() => decideMutation.mutate({ id: e.id, decision: "Approved" })}
+                className="rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-60"
               >
                 Approve
-              </Link>
-              <Link
-                to="/manager/$id"
-                params={{ id: e.id }}
-                search={{ decision: "reject" }}
-                className="rounded-md bg-destructive px-3.5 py-2 text-sm font-semibold text-destructive-foreground transition hover:opacity-90"
+              </button>
+              <button
+                type="button"
+                disabled={decideMutation.isPending}
+                onClick={() =>
+                  decideMutation.mutate({ id: e.id, decision: "Needs Clarification" })
+                }
+                className="rounded-md bg-pending px-3.5 py-2 text-sm font-semibold text-pending-foreground transition hover:opacity-90 disabled:opacity-60"
               >
-                Reject
-              </Link>
+                Needs Clarification
+              </button>
+              <button
+                type="button"
+                disabled={decideMutation.isPending}
+                onClick={() => decideMutation.mutate({ id: e.id, decision: "Rejected" })}
+                className="rounded-md bg-destructive px-3.5 py-2 text-sm font-semibold text-destructive-foreground transition hover:opacity-90 disabled:opacity-60"
+              >
+                Declined
+              </button>
               <Link
                 to="/manager/$id"
                 params={{ id: e.id }}
                 className="rounded-md border border-input px-3.5 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
               >
-                View full
+                View Full
               </Link>
             </div>
           </article>
