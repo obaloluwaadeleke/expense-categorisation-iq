@@ -2,7 +2,8 @@
 // CONFIGURABLE WEBHOOK ENDPOINTS
 // Replace these placeholder strings with your real Make.com webhook URLs.
 // ---------------------------------------------------------------------------
-export const YOUR_MAKE_WEBHOOK_URL = "YOUR_MAKE_WEBHOOK_URL"; // POST new expense
+export const YOUR_MAKE_WEBHOOK_URL =
+  "https://hook.eu1.make.com/icfr4wlejwuru0nioz5qdhb0eipvc19c"; // POST new expense
 export const YOUR_MAKE_READ_WEBHOOK = "YOUR_MAKE_READ_WEBHOOK"; // GET expenses
 export const YOUR_MAKE_UPDATE_WEBHOOK = "YOUR_MAKE_UPDATE_WEBHOOK"; // PATCH decision
 
@@ -37,7 +38,7 @@ export const PAYMENT_METHODS = [
 export type Department = (typeof DEPARTMENTS)[number];
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export type Category = (typeof CATEGORIES)[number];
-export type Status = "Pending" | "Approved" | "Rejected";
+export type Status = "Pending" | "Approved" | "Rejected" | "Needs Clarification";
 
 export interface Expense {
   id: string;

@@ -1,23 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
-import { useRequireRole } from "@/hooks/useAuth";
-import { createExpense, listExpenses } from "@/lib/expenses.functions";
 import {
   APPROVAL_THRESHOLD,
   DEPARTMENTS,
   PAYMENT_METHODS,
+  YOUR_MAKE_WEBHOOK_URL,
   formatNaira,
   generateReference,
   type Department,
   type PaymentMethod,
 } from "@/lib/expense-data";
-
 
 export const Route = createFileRoute("/employee")({
   head: () => ({
@@ -34,6 +30,8 @@ export const Route = createFileRoute("/employee")({
         content:
           "Submit a business expense claim in Naira with receipt upload and track your past submissions.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: EmployeePage,
@@ -42,12 +40,27 @@ export const Route = createFileRoute("/employee")({
 const inputClass =
   "w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30";
 
-function EmployeePage() {
-  const auth = useRequireRole(["employee", "manager", "admin"]);
-  const queryClient = useQueryClient();
-  const fetchExpenses = useServerFn(listExpenses);
-  const submitExpense = useServerFn(createExpense);
+const STORAGE_KEY = "expenseiq.my-submissions";
 
+type LocalSubmission = {
+  reference: string;
+  title: string;
+  amount: number;
+  department: string;
+  date: string;
+  status: "Pending";
+};
+
+function readLocal(): LocalSubmission[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as LocalSubmission[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function EmployeePage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [department, setDepartment] = useState<Department | "">("");
@@ -61,36 +74,16 @@ function EmployeePage() {
   const [receipt, setReceipt] = useState<File | null>(null);
   const [receiptError, setReceiptError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [reference, setReference] = useState<string | null>(null);
+  const [submissions, setSubmissions] = useState<LocalSubmission[]>([]);
+
+  useEffect(() => {
+    setSubmissions(readLocal());
+  }, []);
 
   const numericAmount = Number(amount) || 0;
   const needsApproval = numericAmount >= APPROVAL_THRESHOLD;
-
-  useEffect(() => {
-    if (auth.user?.email && !email) setEmail(auth.user.email);
-    const meta = auth.user?.user_metadata as
-      | { full_name?: string; department?: string }
-      | undefined;
-    if (meta?.full_name && !fullName) setFullName(meta.full_name);
-    if (meta?.department && !department) setDepartment(meta.department as Department);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.user]);
-
-  const expensesQuery = useQuery({
-    queryKey: ["expenses", "mine"],
-    enabled: Boolean(auth.session),
-    queryFn: () => fetchExpenses({ data: undefined }),
-  });
-
-  const submissions = expensesQuery.data?.expenses ?? [];
-  const usingSampleData = expensesQuery.data?.source === "mock";
-
-  const mutation = useMutation({
-    mutationFn: submitExpense,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["expenses"] });
-    },
-  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,32 +93,57 @@ function EmployeePage() {
     }
     setReceiptError(null);
     setFormError(null);
+    setSubmitting(true);
+
     const ref = generateReference();
+    const payload = {
+      reference: ref,
+      employeeName: fullName,
+      employeeEmail: email,
+      department,
+      expenseDate: date,
+      vendor,
+      amount: numericAmount,
+      purpose: description,
+      paymentMethod,
+      project,
+      notes,
+      receiptName: receipt.name,
+      receiptType: receipt.type,
+      requiresApproval: needsApproval,
+      submittedAt: new Date().toISOString(),
+    };
+
     try {
-      await mutation.mutateAsync({
-        data: {
-          fullName,
-          department,
-          date,
-          vendor,
-          amount: numericAmount,
-          purpose: description,
-          paymentMethod,
-          project,
-          notes,
-          receiptName: receipt.name,
-          reference: ref,
-        },
-      });
+      const body = new FormData();
+      body.append("payload", JSON.stringify(payload));
+      for (const [key, value] of Object.entries(payload)) {
+        body.append(key, String(value ?? ""));
+      }
+      body.append("receipt", receipt, receipt.name);
+
+      const response = await fetch(YOUR_MAKE_WEBHOOK_URL, { method: "POST", body });
+      if (!response.ok) throw new Error(`Webhook responded with ${response.status}`);
+
+      const record: LocalSubmission = {
+        reference: ref,
+        title: vendor || description.slice(0, 40) || "Expense claim",
+        amount: numericAmount,
+        department,
+        date,
+        status: "Pending",
+      };
+      const next = [record, ...readLocal()].slice(0, 25);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setSubmissions(next);
       setReference(ref);
     } catch (err) {
-      console.error("Failed to save expense", err);
-      setFormError(
-        err instanceof Error ? err.message : "We couldn't save your expense. Please try again.",
-      );
+      console.error("Failed to send expense", err);
+      setFormError("We couldn't send your expense. Please check your connection and try again.");
+    } finally {
+      setSubmitting(false);
     }
   }
-
 
   function resetForm() {
     setFullName("");
@@ -171,8 +189,8 @@ function EmployeePage() {
 
   return (
     <AppShell
-      title="Employee workspace"
-      subtitle="Submit a new expense claim and track your submissions."
+      title="File your expense"
+      subtitle="No login needed — complete the form below and you'll get a reference number."
     >
       <div className="grid gap-6 lg:grid-cols-5">
         <form
@@ -334,51 +352,56 @@ function EmployeePage() {
 
           <button
             type="submit"
-            disabled={mutation.isPending}
+            disabled={submitting}
             className="mt-6 w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-60"
           >
-            {mutation.isPending ? "Submitting…" : "Submit expense"}
+            {submitting ? "Submitting…" : "Submit expense"}
           </button>
         </form>
 
         <section className="rounded-xl border border-border bg-card p-6 shadow-card lg:col-span-2">
           <h2 className="text-base font-semibold text-card-foreground">My submissions</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {expensesQuery.isLoading
-              ? "Loading your records…"
-              : usingSampleData
-                ? "Showing sample data until the expense database is configured."
-                : "Live from your expense database."}
+            Claims you have sent from this device.
           </p>
 
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-muted-foreground">
-                <tr className="border-b border-border">
-                  <th className="py-2 pr-3 font-medium">Title</th>
-                  <th className="py-2 pr-3 font-medium">Amount</th>
-                  <th className="py-2 pr-3 font-medium">Category</th>
-                  <th className="py-2 pr-3 font-medium">Date</th>
-                  <th className="py-2 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {submissions.map((s) => (
-                  <tr key={s.id} className="border-b border-border/60 last:border-0">
-                    <td className="py-3 pr-3 font-medium text-foreground">{s.title}</td>
-                    <td className="py-3 pr-3 whitespace-nowrap">{formatNaira(s.amount)}</td>
-                    <td className="py-3 pr-3 text-muted-foreground">{s.category}</td>
-                    <td className="py-3 pr-3 whitespace-nowrap text-muted-foreground">
-                      {s.date}
-                    </td>
-                    <td className="py-3">
-                      <StatusBadge status={s.status} />
-                    </td>
+          {submissions.length === 0 ? (
+            <p className="mt-4 rounded-md bg-secondary px-4 py-3 text-sm text-muted-foreground">
+              Nothing submitted yet.
+            </p>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr className="border-b border-border">
+                    <th className="py-2 pr-3 font-medium">Expense</th>
+                    <th className="py-2 pr-3 font-medium">Amount</th>
+                    <th className="py-2 pr-3 font-medium">Date</th>
+                    <th className="py-2 font-medium">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {submissions.map((s) => (
+                    <tr key={s.reference} className="border-b border-border/60 last:border-0">
+                      <td className="py-3 pr-3">
+                        <span className="font-medium text-foreground">{s.title}</span>
+                        <span className="block font-mono text-xs text-muted-foreground">
+                          {s.reference}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-3 whitespace-nowrap">{formatNaira(s.amount)}</td>
+                      <td className="py-3 pr-3 whitespace-nowrap text-muted-foreground">
+                        {s.date}
+                      </td>
+                      <td className="py-3">
+                        <StatusBadge status={s.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
     </AppShell>

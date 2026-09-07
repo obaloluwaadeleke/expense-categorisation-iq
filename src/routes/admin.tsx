@@ -49,7 +49,9 @@ function AdminPage() {
     const sum = (s: string) =>
       expenses.filter((e) => e.status === s).reduce((a, e) => a + e.amount, 0);
     const total = expenses.reduce((a, e) => a + e.amount, 0);
-    const decided = expenses.filter((e) => e.status !== "Pending").length;
+    const decided = expenses.filter(
+      (e) => e.status === "Approved" || e.status === "Rejected",
+    ).length;
     const approvedCount = expenses.filter((e) => e.status === "Approved").length;
     return {
       total,
