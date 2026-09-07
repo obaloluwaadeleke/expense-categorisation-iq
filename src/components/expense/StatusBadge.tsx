@@ -5,6 +5,7 @@ const styles: Record<Status, string> = {
   Pending: "bg-pending text-pending-foreground",
   Approved: "bg-approved text-approved-foreground",
   Rejected: "bg-rejected text-rejected-foreground",
+  "Needs Clarification": "bg-pending text-pending-foreground",
 };
 
 export function StatusBadge({ status, className }: { status: Status; className?: string }) {

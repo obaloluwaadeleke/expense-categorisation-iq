@@ -78,7 +78,8 @@ function str(value: unknown): string {
 function toStatus(value: unknown): Status {
   const raw = str(value).trim();
   if (raw === "Approved") return "Approved";
-  if (raw === "Rejected") return "Rejected";
+  if (raw === "Rejected" || raw === "Declined") return "Rejected";
+  if (raw === "Needs Clarification") return "Needs Clarification";
   return "Pending";
 }
 
@@ -268,12 +269,18 @@ export const createExpense = createServerFn({ method: "POST" })
 // ---------------------------------------------------------------------------
 export const decideExpense = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; decision: "Approved" | "Rejected"; comment?: string }) => {
-    if (!input.id?.trim()) throw new Error("Expense id is required.");
-    if (input.decision !== "Approved" && input.decision !== "Rejected")
-      throw new Error("Invalid decision.");
-    return input;
-  })
+  .inputValidator(
+    (input: {
+      id: string;
+      decision: "Approved" | "Rejected" | "Needs Clarification";
+      comment?: string;
+    }) => {
+      if (!input.id?.trim()) throw new Error("Expense id is required.");
+      if (!["Approved", "Rejected", "Needs Clarification"].includes(input.decision))
+        throw new Error("Invalid decision.");
+      return input;
+    },
+  )
   .handler(async ({ data, context }) => {
     const { role } = await resolveIdentity(context as unknown as AuthContext);
     if (role !== "manager" && role !== "admin") {
