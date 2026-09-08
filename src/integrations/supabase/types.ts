@@ -29,6 +29,78 @@ export type Database = {
         }
         Relationships: []
       }
+      expenses: {
+        Row: {
+          additional_notes: string | null
+          ai_reviewer_note: string | null
+          ai_summary: string | null
+          amount: number
+          approved_by: string | null
+          department: string | null
+          employee_email: string
+          employee_name: string
+          expense_date: string | null
+          id: string
+          manager_comment: string | null
+          payment_method: string | null
+          project_client: string | null
+          purpose: string | null
+          receipt_url: string | null
+          reference: string
+          requires_approval: boolean
+          status: string
+          submitted_at: string
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          ai_reviewer_note?: string | null
+          ai_summary?: string | null
+          amount?: number
+          approved_by?: string | null
+          department?: string | null
+          employee_email: string
+          employee_name: string
+          expense_date?: string | null
+          id?: string
+          manager_comment?: string | null
+          payment_method?: string | null
+          project_client?: string | null
+          purpose?: string | null
+          receipt_url?: string | null
+          reference: string
+          requires_approval?: boolean
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          additional_notes?: string | null
+          ai_reviewer_note?: string | null
+          ai_summary?: string | null
+          amount?: number
+          approved_by?: string | null
+          department?: string | null
+          employee_email?: string
+          employee_name?: string
+          expense_date?: string | null
+          id?: string
+          manager_comment?: string | null
+          payment_method?: string | null
+          project_client?: string | null
+          purpose?: string | null
+          receipt_url?: string | null
+          reference?: string
+          requires_approval?: boolean
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
