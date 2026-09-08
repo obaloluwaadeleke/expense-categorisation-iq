@@ -1,11 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { AiBadge, HighBadge } from "@/components/expense/StatusBadge";
 import { useRequireRole } from "@/hooks/useAuth";
-import { listExpenses } from "@/lib/expenses.functions";
+import { decideExpense, listExpenses } from "@/lib/expenses.functions";
 import { APPROVAL_THRESHOLD, formatNaira } from "@/lib/expense-data";
 
 export const Route = createFileRoute("/manager/")({
@@ -33,6 +33,16 @@ export const Route = createFileRoute("/manager/")({
 function ManagerQueue() {
   const auth = useRequireRole(["manager", "admin"]);
   const fetchExpenses = useServerFn(listExpenses);
+  const sendDecision = useServerFn(decideExpense);
+  const queryClient = useQueryClient();
+
+  const decideMutation = useMutation({
+    mutationFn: (input: {
+      id: string;
+      decision: "Approved" | "Rejected" | "Needs Clarification";
+    }) => sendDecision({ data: input }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["expenses"] }),
+  });
 
   const expensesQuery = useQuery({
     queryKey: ["expenses", "all"],
@@ -54,6 +64,12 @@ function ManagerQueue() {
             }`
       }
     >
+      {decideMutation.isError ? (
+        <p className="mb-4 rounded-md bg-secondary px-4 py-3 text-sm text-destructive">
+          We couldn't save that decision. Please try again.
+        </p>
+      ) : null}
+
       {expensesQuery.isError ? (
         <p className="rounded-md bg-secondary px-4 py-3 text-sm text-destructive">
           We couldn't load the claims right now. Please refresh and try again.

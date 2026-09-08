@@ -10,11 +10,15 @@ import { useRequireRole } from "@/hooks/useAuth";
 import { decideExpense, listExpenses } from "@/lib/expenses.functions";
 import { APPROVAL_THRESHOLD, formatNaira } from "@/lib/expense-data";
 
-type Search = { decision?: "approve" | "reject" };
+type Decision = "Approved" | "Rejected" | "Needs Clarification";
+
+type Search = { decision?: "approve" | "reject" | "clarify" };
 
 export const Route = createFileRoute("/manager/$id")({
   validateSearch: (search: Record<string, unknown>): Search =>
-    search["decision"] === "approve" || search["decision"] === "reject"
+    search["decision"] === "approve" ||
+    search["decision"] === "reject" ||
+    search["decision"] === "clarify"
       ? { decision: search["decision"] }
       : {},
   head: () => ({
@@ -57,7 +61,7 @@ function ExpenseDetail() {
   const [comment, setComment] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<"Approved" | "Rejected" | null>(null);
+  const [done, setDone] = useState<Decision | null>(null);
 
   if (expensesQuery.isLoading) {
     return <AppShell title="Loading expense…">{null}</AppShell>;
@@ -73,7 +77,7 @@ function ExpenseDetail() {
     );
   }
 
-  async function sendDecision(outcome: "Approved" | "Rejected") {
+  async function sendDecision(outcome: Decision) {
     setSaving(true);
     setError(null);
     try {
@@ -141,7 +145,12 @@ function ExpenseDetail() {
           <h2 className="text-base font-semibold text-card-foreground">Manager decision</h2>
           {decision && !done ? (
             <p className="mt-2 text-xs text-muted-foreground">
-              Pre-selected action: {decision === "approve" ? "Approve" : "Reject"}
+              Pre-selected action:{" "}
+              {decision === "approve"
+                ? "Approve"
+                : decision === "clarify"
+                  ? "Needs Clarification"
+                  : "Declined"}
             </p>
           ) : null}
           <label className="mt-4 block">
@@ -161,10 +170,10 @@ function ExpenseDetail() {
 
           {done ? (
             <p className="mt-4 rounded-md bg-secondary px-4 py-3 text-sm font-medium text-foreground">
-              Expense {done.toLowerCase()}. Returning to the queue…
+              Decision saved: {done}. Returning to the queue…
             </p>
           ) : (
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 flex flex-wrap gap-2">
               <button
                 disabled={saving}
                 onClick={() => sendDecision("Approved")}
@@ -174,10 +183,17 @@ function ExpenseDetail() {
               </button>
               <button
                 disabled={saving}
+                onClick={() => sendDecision("Needs Clarification")}
+                className="flex-1 rounded-md bg-pending px-3.5 py-2 text-sm font-semibold text-pending-foreground transition hover:opacity-90 disabled:opacity-60"
+              >
+                Needs Clarification
+              </button>
+              <button
+                disabled={saving}
                 onClick={() => sendDecision("Rejected")}
                 className="flex-1 rounded-md bg-destructive px-3.5 py-2 text-sm font-semibold text-destructive-foreground transition hover:opacity-90 disabled:opacity-60"
               >
-                Reject
+                Declined
               </button>
             </div>
           )}
