@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-import { YOUR_MAKE_WEBHOOK_URL, type Expense, type Status } from "./expense-data";
+import {
+  AIRTABLE_BASE_ID,
+  AIRTABLE_EXPENSES_TABLE,
+  AIRTABLE_FIELDS,
+} from "./airtable-config";
+import { type Expense, type Status } from "./expense-data";
 
 export type AppRole = "admin" | "manager" | "employee";
 
@@ -145,8 +150,53 @@ export const listExpenses = createServerFn({ method: "POST" })
   });
 
 // ---------------------------------------------------------------------------
-// Decision — managers and admins only. Writes to Supabase, then notifies Make.
+// Decision — managers and admins only.
+// Updates the Airtable "Status" column ONLY (no comments, notes or webhooks),
+// so Airtable automations / Make triggers watching Status fire cleanly.
+// The local status is mirrored in Supabase so the queue stays accurate.
 // ---------------------------------------------------------------------------
+const AIRTABLE_GATEWAY = "https://connector-gateway.lovable.dev/airtable";
+
+async function airtableRequest(path: string, init?: RequestInit) {
+  const lovableKey = process.env["LOVABLE_API_KEY"];
+  const airtableKey = process.env["AIRTABLE_API_KEY"];
+  if (!lovableKey || !airtableKey) {
+    throw new Error("Airtable connection is not configured.");
+  }
+  const response = await fetch(`${AIRTABLE_GATEWAY}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": airtableKey,
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+  if (!response.ok) {
+    const body = await response.text();
+    console.error(`Airtable request failed [${response.status}]: ${body}`);
+    throw new Error(`Airtable request failed [${response.status}]: ${body}`);
+  }
+  return response.json() as Promise<any>;
+}
+
+async function updateAirtableStatus(reference: string, status: Status) {
+  const table = encodeURIComponent(AIRTABLE_EXPENSES_TABLE);
+  const formula = encodeURIComponent(`{Reference}='${reference.replace(/'/g, "\\'")}'`);
+  const found = await airtableRequest(
+    `/v0/${AIRTABLE_BASE_ID}/${table}?maxRecords=1&filterByFormula=${formula}`,
+  );
+  const recordId = found?.records?.[0]?.id as string | undefined;
+  if (!recordId) {
+    throw new Error(`No Airtable record found for reference ${reference}.`);
+  }
+  await airtableRequest(`/v0/${AIRTABLE_BASE_ID}/${table}/${recordId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ fields: { [AIRTABLE_FIELDS.status]: status } }),
+  });
+  return recordId;
+}
+
 export const decideExpense = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
@@ -168,38 +218,27 @@ export const decideExpense = createServerFn({ method: "POST" })
       throw new Error("Forbidden: only managers and admins can decide on expenses.");
     }
 
-    const { data: updated, error } = await ctx.supabase
+    const { data: row, error: readError } = await ctx.supabase
       .from("expenses")
-      .update({
-        status: toDbStatus(data.decision),
-        manager_comment: data.comment ?? "",
-        approved_by: "Manager",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", data.id)
       .select("reference")
+      .eq("id", data.id)
       .maybeSingle();
+
+    if (readError) throw new Error(readError.message);
+
+    const reference = (row as { reference?: string } | null)?.reference ?? data.id;
+
+    // Airtable: Status column only.
+    await updateAirtableStatus(reference, data.decision);
+
+    // Mirror the status locally so the queue and dashboard stay in sync.
+    const { error } = await ctx.supabase
+      .from("expenses")
+      .update({ status: toDbStatus(data.decision), updated_at: new Date().toISOString() })
+      .eq("id", data.id);
 
     if (error) throw new Error(error.message);
 
-    const reference = (updated as { reference?: string } | null)?.reference ?? data.id;
-
-    try {
-      await fetch(YOUR_MAKE_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event: "decision",
-          reference,
-          decision: data.decision,
-          comment: data.comment ?? "",
-          approved_by: "Manager",
-          decided_at: new Date().toISOString(),
-        }),
-      });
-    } catch (err) {
-      console.error("Make webhook notification failed", err);
-    }
-
-    return { updated: true, reference, source: "supabase" as const };
+    return { updated: true, reference, status: data.decision, source: "airtable" as const };
   });
+
