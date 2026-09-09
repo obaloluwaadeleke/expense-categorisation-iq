@@ -96,36 +96,59 @@ function EmployeePage() {
     setSubmitting(true);
 
     const ref = generateReference();
-    const payload = {
-      reference: ref,
-      employeeName: fullName,
-      employeeEmail: email,
-      department,
-      expenseDate: date,
-      vendor,
-      amount: numericAmount,
-      purpose: description,
-      paymentMethod,
-      project,
-      notes,
-      receiptName: receipt.name,
-      receiptType: receipt.type,
-      requiresApproval: needsApproval,
-      submittedAt: new Date().toISOString(),
-    };
 
     try {
-      const body = new FormData();
-      body.append("payload", JSON.stringify(payload));
-      for (const [key, value] of Object.entries(payload)) {
-        body.append(key, String(value ?? ""));
+      // 1. Upload the receipt and build a shareable link.
+      let receiptUrl: string | null = null;
+      const safeName = receipt.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${ref}/${safeName}`;
+      const upload = await supabase.storage
+        .from("receipts")
+        .upload(path, receipt, { upsert: true, contentType: receipt.type });
+      if (upload.error) throw upload.error;
+
+      const signed = await supabase.storage
+        .from("receipts")
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+      receiptUrl = signed.data?.signedUrl ?? null;
+
+      // 2. Save the claim to the database.
+      const record = {
+        reference: ref,
+        employee_name: fullName,
+        employee_email: email,
+        department,
+        vendor,
+        amount: numericAmount,
+        purpose: description,
+        payment_method: paymentMethod,
+        project_client: project,
+        additional_notes: notes,
+        expense_date: date,
+        receipt_url: receiptUrl,
+        status: "pending",
+        requires_approval: needsApproval,
+      };
+
+      const { error: insertError } = await supabase.from("expenses").insert(record);
+      if (insertError) throw insertError;
+
+      // 3. Notify Make with every field, including the receipt link.
+      try {
+        await fetch(YOUR_MAKE_WEBHOOK_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...record,
+            receipt_name: receipt.name,
+            submitted_at: new Date().toISOString(),
+          }),
+        });
+      } catch (webhookError) {
+        console.error("Make webhook failed", webhookError);
       }
-      body.append("receipt", receipt, receipt.name);
 
-      const response = await fetch(YOUR_MAKE_WEBHOOK_URL, { method: "POST", body });
-      if (!response.ok) throw new Error(`Webhook responded with ${response.status}`);
-
-      const record: LocalSubmission = {
+      const local: LocalSubmission = {
         reference: ref,
         title: vendor || description.slice(0, 40) || "Expense claim",
         amount: numericAmount,
@@ -133,17 +156,18 @@ function EmployeePage() {
         date,
         status: "Pending",
       };
-      const next = [record, ...readLocal()].slice(0, 25);
+      const next = [local, ...readLocal()].slice(0, 25);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       setSubmissions(next);
       setReference(ref);
     } catch (err) {
-      console.error("Failed to send expense", err);
+      console.error("Failed to submit expense", err);
       setFormError("We couldn't send your expense. Please check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
   }
+
 
   function resetForm() {
     setFullName("");
