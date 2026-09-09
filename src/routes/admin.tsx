@@ -43,7 +43,6 @@ function AdminPage() {
   });
 
   const expenses = useMemo(() => expensesQuery.data?.expenses ?? [], [expensesQuery.data]);
-  const usingSampleData = expensesQuery.data?.source === "mock";
 
   const stats = useMemo(() => {
     const sum = (s: string) =>
@@ -90,7 +89,7 @@ function AdminPage() {
       subtitle={
         expensesQuery.isLoading
           ? "Loading company-wide records…"
-          : `Company-wide expense overview.${usingSampleData ? " Showing sample data." : ""}`
+          : "Company-wide expense overview."
       }
     >
 

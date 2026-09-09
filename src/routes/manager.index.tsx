@@ -51,7 +51,6 @@ function ManagerQueue() {
   });
 
   const pending = (expensesQuery.data?.expenses ?? []).filter((e) => e.status === "Pending");
-  const usingSampleData = expensesQuery.data?.source === "mock";
 
   return (
     <AppShell
@@ -59,9 +58,7 @@ function ManagerQueue() {
       subtitle={
         expensesQuery.isLoading
           ? "Loading claims…"
-          : `${pending.length} pending claims awaiting your decision.${
-              usingSampleData ? " Showing sample data." : ""
-            }`
+          : `${pending.length} pending claims awaiting your decision.`
       }
     >
       {decideMutation.isError ? (
