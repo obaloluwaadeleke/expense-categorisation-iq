@@ -2,7 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-import { YOUR_MAKE_WEBHOOK_URL, type Expense, type Status } from "./expense-data";
+import {
+  AIRTABLE_BASE_ID,
+  AIRTABLE_EXPENSES_TABLE,
+  AIRTABLE_FIELDS,
+} from "./airtable-config";
+import { type Expense, type Status } from "./expense-data";
 
 export type AppRole = "admin" | "manager" | "employee";
 
