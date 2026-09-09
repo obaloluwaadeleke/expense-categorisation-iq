@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
+import { supabase } from "@/integrations/supabase/client";
 import {
   APPROVAL_THRESHOLD,
   DEPARTMENTS,
