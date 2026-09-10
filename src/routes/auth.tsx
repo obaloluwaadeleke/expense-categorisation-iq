@@ -48,23 +48,11 @@ function AuthPage() {
     setError(null);
     setBusy(true);
     try {
-      if (mode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: { full_name: fullName, department },
-          },
-        });
-        if (signUpError) throw signUpError;
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) throw signInError;
-      }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) throw signInError;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
