@@ -12,7 +12,7 @@ export function StatusBadge({ status, className }: { status: Status; className?:
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        "inline-flex max-w-full items-center rounded-full px-3 py-1 text-xs font-semibold",
         styles[status],
         className,
       )}
@@ -32,7 +32,7 @@ export function AiBadge({ recommendation }: { recommendation: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        "inline-flex max-w-full items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold",
         tone,
       )}
     >
@@ -43,7 +43,7 @@ export function AiBadge({ recommendation }: { recommendation: string }) {
 
 export function HighBadge() {
   return (
-    <span className="inline-flex items-center rounded-full bg-destructive px-2.5 py-0.5 text-xs font-bold tracking-wide text-destructive-foreground">
+    <span className="inline-flex shrink-0 items-center rounded-full bg-destructive px-3 py-1 text-xs font-bold tracking-wide text-destructive-foreground">
       HIGH
     </span>
   );

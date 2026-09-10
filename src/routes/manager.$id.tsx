@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { AiBadge, HighBadge, StatusBadge } from "@/components/expense/StatusBadge";
+import { Button } from "@/components/ui/button";
 import { useRequireRole } from "@/hooks/useAuth";
 import { decideExpense, listExpenses } from "@/lib/expenses.functions";
 import { APPROVAL_THRESHOLD, formatNaira } from "@/lib/expense-data";
@@ -97,20 +98,20 @@ function ExpenseDetail() {
     <AppShell title={expense.title} subtitle={`Reference ${expense.reference}`}>
       <Link
         to="/manager"
-        className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-accent"
+        className="mb-5 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent"
       >
         <ArrowLeft className="h-4 w-4" /> Back to approval queue
       </Link>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section className="rounded-xl border border-border bg-card p-6 shadow-card lg:col-span-2">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
+        <section className="min-w-0 rounded-xl border border-border bg-card p-4 shadow-card sm:p-6 lg:col-span-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <StatusBadge status={done ?? expense.status} />
             <AiBadge recommendation={expense.aiRecommendation ?? "Review"} />
             {expense.amount >= APPROVAL_THRESHOLD && <HighBadge />}
           </div>
 
-          <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+          <dl className="mt-5 grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
             <Detail label="Submitter" value={expense.fullName} />
             <Detail label="Email" value={expense.email ?? "—"} />
             <Detail label="Department" value={expense.department || "—"} />
@@ -128,7 +129,7 @@ function ExpenseDetail() {
             </div>
           </dl>
 
-          <div className="mt-6 rounded-lg border border-border bg-secondary/60 p-5">
+          <div className="mt-6 min-w-0 rounded-lg border border-border bg-secondary/60 p-4 sm:p-5">
             <h2 className="text-sm font-semibold text-foreground">AI analysis</h2>
             <dl className="mt-3 grid gap-3 sm:grid-cols-2">
               <Detail label="Category detected" value={expense.categoryDetected ?? "—"} />
@@ -141,7 +142,7 @@ function ExpenseDetail() {
           </div>
         </section>
 
-        <section className="h-fit rounded-xl border border-border bg-card p-6 shadow-card">
+        <section className="h-fit min-w-0 rounded-xl border border-border bg-card p-4 shadow-card sm:p-6">
           <h2 className="text-base font-semibold text-card-foreground">Manager decision</h2>
           {decision && !done ? (
             <p className="mt-2 text-xs text-muted-foreground">
@@ -162,7 +163,7 @@ function ExpenseDetail() {
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Add a note for the employee…"
-              className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
+              className="min-h-32 w-full resize-y rounded-md border border-input bg-card px-3 py-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30 sm:text-sm"
             />
           </label>
 
@@ -173,28 +174,29 @@ function ExpenseDetail() {
               Decision saved: {done}. Returning to the queue…
             </p>
           ) : (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <Button
                 disabled={saving}
                 onClick={() => sendDecision("Approved")}
-                className="flex-1 rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-60"
+                className="h-11 w-full bg-accent font-semibold text-accent-foreground hover:bg-accent/90"
               >
                 Approve
-              </button>
-              <button
+              </Button>
+              <Button
                 disabled={saving}
                 onClick={() => sendDecision("Needs Clarification")}
-                className="flex-1 rounded-md bg-pending px-3.5 py-2 text-sm font-semibold text-pending-foreground transition hover:opacity-90 disabled:opacity-60"
+                className="h-11 w-full bg-pending font-semibold text-pending-foreground hover:bg-pending/80"
               >
                 Needs Clarification
-              </button>
-              <button
+              </Button>
+              <Button
                 disabled={saving}
                 onClick={() => sendDecision("Rejected")}
-                className="flex-1 rounded-md bg-destructive px-3.5 py-2 text-sm font-semibold text-destructive-foreground transition hover:opacity-90 disabled:opacity-60"
+                variant="destructive"
+                className="h-11 w-full font-semibold"
               >
                 Declined
-              </button>
+              </Button>
             </div>
           )}
         </section>
@@ -205,9 +207,9 @@ function ExpenseDetail() {
 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-sm font-medium text-foreground">{value}</dd>
+      <dd className="mt-1 break-words text-sm font-medium text-foreground">{value}</dd>
     </div>
   );
 }

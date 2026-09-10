@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { AiBadge, HighBadge } from "@/components/expense/StatusBadge";
+import { Button } from "@/components/ui/button";
 import { useRequireRole } from "@/hooks/useAuth";
 import { decideExpense, listExpenses } from "@/lib/expenses.functions";
 import { APPROVAL_THRESHOLD, formatNaira } from "@/lib/expense-data";
@@ -79,24 +80,24 @@ function ManagerQueue() {
         </p>
       ) : null}
 
-      <div className="grid gap-5 md:grid-cols-2">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2 md:gap-5">
         {pending.map((e) => (
           <article
             key={e.id}
-            className="flex flex-col rounded-xl border border-border bg-card p-6 shadow-card"
+            className="flex min-w-0 flex-col rounded-xl border border-border bg-card p-4 shadow-card sm:p-6"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-card-foreground">{e.title}</h2>
-                <p className="mt-0.5 text-sm text-muted-foreground">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+              <div className="min-w-0">
+                <h2 className="break-words text-base font-semibold text-card-foreground">{e.title}</h2>
+                <p className="mt-0.5 break-words text-sm text-muted-foreground">
                   {e.fullName} · {e.department || "—"}
                 </p>
               </div>
               {e.amount >= APPROVAL_THRESHOLD && <HighBadge />}
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-              <span className="text-lg font-semibold text-foreground">
+            <div className="mt-4 flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3 text-sm">
+              <span className="shrink-0 text-lg font-semibold text-foreground">
                 {formatNaira(e.amount)}
               </span>
               <span className="text-muted-foreground">{e.category}</span>
@@ -104,44 +105,43 @@ function ManagerQueue() {
               <AiBadge recommendation={e.aiRecommendation ?? "Review"} />
             </div>
 
-            <p className="mt-4 rounded-lg bg-secondary px-4 py-3 text-sm text-muted-foreground">
+            <p className="mt-4 break-words rounded-lg bg-secondary px-4 py-3 text-sm text-muted-foreground">
               {e.aiSummary ?? e.description ?? "No AI summary available yet."}
             </p>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button
+            <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Button
                 type="button"
                 disabled={decideMutation.isPending}
                 onClick={() => decideMutation.mutate({ id: e.id, decision: "Approved" })}
-                className="rounded-md bg-accent px-3.5 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-60"
+                className="h-11 w-full bg-accent font-semibold text-accent-foreground hover:bg-accent/90"
               >
                 Approve
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 disabled={decideMutation.isPending}
                 onClick={() =>
                   decideMutation.mutate({ id: e.id, decision: "Needs Clarification" })
                 }
-                className="rounded-md bg-pending px-3.5 py-2 text-sm font-semibold text-pending-foreground transition hover:opacity-90 disabled:opacity-60"
+                className="h-11 w-full bg-pending font-semibold text-pending-foreground hover:bg-pending/80"
               >
                 Needs Clarification
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 disabled={decideMutation.isPending}
                 onClick={() => decideMutation.mutate({ id: e.id, decision: "Rejected" })}
-                className="rounded-md bg-destructive px-3.5 py-2 text-sm font-semibold text-destructive-foreground transition hover:opacity-90 disabled:opacity-60"
+                variant="destructive"
+                className="h-11 w-full font-semibold"
               >
                 Declined
-              </button>
-              <Link
-                to="/manager/$id"
-                params={{ id: e.id }}
-                className="rounded-md border border-input px-3.5 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
-              >
-                View Full
-              </Link>
+              </Button>
+              <Button asChild variant="outline" className="h-11 w-full">
+                <Link to="/manager/$id" params={{ id: e.id }}>
+                  View Full
+                </Link>
+              </Button>
             </div>
           </article>
         ))}
