@@ -75,45 +75,11 @@ function AuthPage() {
 
   return (
     <AppShell
-      title={mode === "signin" ? "Sign in" : "Create your account"}
-      subtitle="ExpenseIQ keeps every claim tied to the person who filed it."
+      title="Sign in"
+      subtitle="Manager and admin access is invite-only. Filing an expense needs no account."
     >
       <div className="mx-auto max-w-md rounded-xl border border-border bg-card p-6 shadow-card">
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "signup" ? (
-            <>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-foreground">
-                  Full name
-                </span>
-                <input
-                  required
-                  className={inputClass}
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-foreground">
-                  Department
-                </span>
-                <select
-                  required
-                  className={inputClass}
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                >
-                  <option value="">Select a department</option>
-                  {DEPARTMENTS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          ) : null}
-
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-foreground">Email</span>
             <input
