@@ -5,7 +5,7 @@ import { AppShell } from "@/components/expense/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { DEPARTMENTS } from "@/lib/expense-data";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -32,11 +32,8 @@ const inputClass =
   "w-full rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30";
 
 function AuthPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [department, setDepartment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const { session } = useAuth();
@@ -51,23 +48,11 @@ function AuthPage() {
     setError(null);
     setBusy(true);
     try {
-      if (mode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: { full_name: fullName, department },
-          },
-        });
-        if (signUpError) throw signUpError;
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) throw signInError;
-      }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) throw signInError;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
@@ -90,45 +75,11 @@ function AuthPage() {
 
   return (
     <AppShell
-      title={mode === "signin" ? "Sign in" : "Create your account"}
-      subtitle="ExpenseIQ keeps every claim tied to the person who filed it."
+      title="Sign in"
+      subtitle="Manager and admin access is invite-only. Filing an expense needs no account."
     >
       <div className="mx-auto max-w-md rounded-xl border border-border bg-card p-6 shadow-card">
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "signup" ? (
-            <>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-foreground">
-                  Full name
-                </span>
-                <input
-                  required
-                  className={inputClass}
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-foreground">
-                  Department
-                </span>
-                <select
-                  required
-                  className={inputClass}
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                >
-                  <option value="">Select a department</option>
-                  {DEPARTMENTS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          ) : null}
-
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-foreground">Email</span>
             <input
@@ -158,7 +109,7 @@ function AuthPage() {
             disabled={busy}
             className="w-full rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-60"
           >
-            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+            {busy ? "Please wait…" : "Sign in"}
           </button>
         </form>
 
@@ -171,14 +122,8 @@ function AuthPage() {
         </button>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          {mode === "signin" ? "New to ExpenseIQ?" : "Already have an account?"}{" "}
-          <button
-            type="button"
-            className="font-semibold text-accent"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          >
-            {mode === "signin" ? "Create an account" : "Sign in"}
-          </button>
+          Accounts are created by the administrator only. Need access? Ask your admin to add
+          your email.
         </p>
       </div>
     </AppShell>
