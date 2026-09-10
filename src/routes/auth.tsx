@@ -5,7 +5,7 @@ import { AppShell } from "@/components/expense/AppShell";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
-import { DEPARTMENTS } from "@/lib/expense-data";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
