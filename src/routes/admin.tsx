@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
+import { Button } from "@/components/ui/button";
 import { useRequireRole } from "@/hooks/useAuth";
 import { listExpenses } from "@/lib/expenses.functions";
 import { formatNaira } from "@/lib/expense-data";
@@ -93,7 +94,7 @@ function AdminPage() {
       }
     >
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <Stat label="Total spend" value={formatNaira(stats.total)} />
         <Stat label="Total approved" value={formatNaira(stats.approved)} tone="approved" />
         <Stat label="Total rejected" value={formatNaira(stats.rejected)} tone="rejected" />
@@ -101,16 +102,16 @@ function AdminPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <section className="rounded-xl border border-border bg-card p-6 shadow-card lg:col-span-2">
+        <section className="min-w-0 rounded-xl border border-border bg-card p-4 shadow-card sm:p-6 lg:col-span-2">
           <h2 className="text-base font-semibold text-card-foreground">
             Spend by category
           </h2>
           <div className="mt-5 space-y-4">
             {byCategory.map((r) => (
               <div key={r.category}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-foreground">{r.category}</span>
-                  <span className="text-muted-foreground">{formatNaira(r.total)}</span>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm">
+                  <span className="truncate font-medium text-foreground">{r.category}</span>
+                  <span className="shrink-0 text-muted-foreground">{formatNaira(r.total)}</span>
                 </div>
                 <div className="mt-1.5 h-2.5 w-full rounded-full bg-secondary">
                   <div
@@ -123,7 +124,7 @@ function AdminPage() {
           </div>
         </section>
 
-        <section className="flex flex-col items-center justify-center rounded-xl border border-border bg-card p-6 text-center shadow-card">
+        <section className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-border bg-card p-5 text-center shadow-card sm:p-6">
           <h2 className="text-base font-semibold text-card-foreground">Approval rate</h2>
           <p className="mt-4 text-5xl font-semibold text-accent">{stats.approvalRate}%</p>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -132,34 +133,35 @@ function AdminPage() {
         </section>
       </div>
 
-      <section className="mt-6 rounded-xl border border-border bg-card p-6 shadow-card">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="mt-6 min-w-0 rounded-xl border border-border bg-card p-4 shadow-card sm:p-6">
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-base font-semibold text-card-foreground">All records</h2>
-          <div className="flex items-center gap-2">
-            <div className="relative">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
+            <div className="relative min-w-0">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search records…"
-                className="w-56 rounded-md border border-input bg-card py-2 pl-9 pr-3 text-sm outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
+                className="h-11 w-full rounded-md border border-input bg-card py-2 pl-9 pr-3 text-base outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30 sm:w-56 sm:text-sm"
               />
             </div>
-            <button
+            <Button
               type="button"
               onClick={() => window.alert("Export coming soon.")}
-              className="inline-flex items-center gap-1.5 rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
+              variant="outline"
+              className="h-11 w-full sm:w-auto"
             >
               <Download className="h-4 w-4" /> Export
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="mt-4 max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-border">
+          <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="text-xs uppercase tracking-wide text-muted-foreground">
-              <tr className="border-b border-border">
-                <th className="py-2 pr-3 font-medium">Reference</th>
+              <tr className="border-b border-border bg-secondary/50">
+                <th className="py-3 pl-3 pr-3 font-medium">Reference</th>
                 <th className="py-2 pr-3 font-medium">Submitter</th>
                 <th className="py-2 pr-3 font-medium">Title</th>
                 <th className="py-2 pr-3 font-medium">Category</th>
@@ -171,7 +173,7 @@ function AdminPage() {
             <tbody>
               {filtered.map((e) => (
                 <tr key={e.id} className="border-b border-border/60 last:border-0">
-                  <td className="py-3 pr-3 font-mono text-xs text-muted-foreground">
+                  <td className="py-3 pl-3 pr-3 font-mono text-xs text-muted-foreground">
                     {e.reference}
                   </td>
                   <td className="py-3 pr-3">{e.fullName}</td>
@@ -219,9 +221,9 @@ function Stat({
           ? "text-pending-foreground"
           : "text-foreground";
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-card">
+    <div className="min-w-0 rounded-xl border border-border bg-card p-4 shadow-card sm:p-5">
       <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold ${accent}`}>{value}</p>
+      <p className={`mt-2 break-words text-2xl font-semibold ${accent}`}>{value}</p>
     </div>
   );
 }
