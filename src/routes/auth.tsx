@@ -109,7 +109,7 @@ function AuthPage() {
             disabled={busy}
             className="w-full rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:opacity-90 disabled:opacity-60"
           >
-            {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+            {busy ? "Please wait…" : "Sign in"}
           </button>
         </form>
 
@@ -122,14 +122,8 @@ function AuthPage() {
         </button>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          {mode === "signin" ? "New to ExpenseIQ?" : "Already have an account?"}{" "}
-          <button
-            type="button"
-            className="font-semibold text-accent"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          >
-            {mode === "signin" ? "Create an account" : "Sign in"}
-          </button>
+          Accounts are created by the administrator only. Need access? Ask your admin to add
+          your email.
         </p>
       </div>
     </AppShell>
