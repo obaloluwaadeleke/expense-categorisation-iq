@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 
 import { AppShell } from "@/components/expense/AppShell";
@@ -109,6 +109,19 @@ function ManagerQueue() {
               {e.aiSummary ?? e.description ?? "No AI summary available yet."}
             </p>
 
+            <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
+              <span aria-hidden className="mt-0.5 shrink-0 text-accent">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" />
+                </svg>
+              </span>
+              <span>
+                Full details — AI summary, detected category, review flags, and attachments — are captured in your notification email.
+              </span>
+            </p>
+
             <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Button
                 type="button"
@@ -121,26 +134,21 @@ function ManagerQueue() {
               <Button
                 type="button"
                 disabled={decideMutation.isPending}
-                onClick={() =>
-                  decideMutation.mutate({ id: e.id, decision: "Needs Clarification" })
-                }
-                className="h-11 w-full bg-pending font-semibold text-pending-foreground hover:bg-pending/80"
-              >
-                Needs Clarification
-              </Button>
-              <Button
-                type="button"
-                disabled={decideMutation.isPending}
                 onClick={() => decideMutation.mutate({ id: e.id, decision: "Rejected" })}
                 variant="destructive"
                 className="h-11 w-full font-semibold"
               >
-                Declined
+                Decline
               </Button>
-              <Button asChild variant="outline" className="h-11 w-full">
-                <Link to="/manager/$id" params={{ id: e.id }}>
-                  View Full
-                </Link>
+              <Button
+                type="button"
+                disabled={decideMutation.isPending}
+                onClick={() =>
+                  decideMutation.mutate({ id: e.id, decision: "Needs Clarification" })
+                }
+                className="col-span-1 h-11 w-full bg-pending font-semibold text-pending-foreground hover:bg-pending/80 sm:col-span-2"
+              >
+                Needs Clarification
               </Button>
             </div>
           </article>
