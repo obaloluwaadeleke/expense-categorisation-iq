@@ -10,7 +10,6 @@ import {
   APPROVAL_THRESHOLD,
   DEPARTMENTS,
   PAYMENT_METHODS,
-  YOUR_MAKE_WEBHOOK_URL,
   generateReference,
 } from "./expense-data";
 
@@ -108,16 +107,26 @@ export const submitExpense = createServerFn({ method: "POST" })
     if (insertError) throw new Error(insertError.message);
 
     // 4. Notify Make with every field, including the receipt link.
+    // Non-critical: the claim is already saved, so a missing secret or failed
+    // webhook is logged but never fails the employee's submission.
+    const makeWebhookUrl = process.env["MAKE_WEBHOOK_URL"];
     try {
-      await fetch(YOUR_MAKE_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...record,
-          receipt_name: data.receipt.name,
-          submitted_at: new Date().toISOString(),
-        }),
-      });
+      if (!makeWebhookUrl) {
+        console.error("Make webhook skipped: MAKE_WEBHOOK_URL secret is not configured.");
+      } else {
+        const response = await fetch(makeWebhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...record,
+            receipt_name: data.receipt.name,
+            submitted_at: new Date().toISOString(),
+          }),
+        });
+        if (!response.ok) {
+          console.error(`Make webhook failed [${response.status}]`);
+        }
+      }
     } catch (webhookError) {
       console.error("Make webhook failed", webhookError);
     }

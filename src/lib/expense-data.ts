@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
 // CONFIGURABLE WEBHOOK ENDPOINTS
-// Replace these placeholder strings with your real Make.com webhook URLs.
+// The new-expense webhook (POST) is NOT stored here: anyone holding that URL can
+// push fake claims into Make, so it's read server-side from the
+// MAKE_WEBHOOK_URL secret in expense-submit.functions.ts.
 // ---------------------------------------------------------------------------
-export const YOUR_MAKE_WEBHOOK_URL =
-  "https://hook.eu1.make.com/icfr4wlejwuru0nioz5qdhb0eipvc19c"; // POST new expense
 export const YOUR_MAKE_READ_WEBHOOK = "YOUR_MAKE_READ_WEBHOOK"; // GET expenses
 export const YOUR_MAKE_UPDATE_WEBHOOK = "YOUR_MAKE_UPDATE_WEBHOOK"; // PATCH decision
 
