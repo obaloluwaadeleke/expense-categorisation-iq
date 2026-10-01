@@ -4,14 +4,12 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
-import { supabase } from "@/integrations/supabase/client";
+import { submitExpense } from "@/lib/expense-submit.functions";
 import {
   APPROVAL_THRESHOLD,
   DEPARTMENTS,
   PAYMENT_METHODS,
-  YOUR_MAKE_WEBHOOK_URL,
   formatNaira,
-  generateReference,
   type Department,
   type PaymentMethod,
 } from "@/lib/expense-data";
@@ -86,6 +84,18 @@ function EmployeePage() {
   const numericAmount = Number(amount) || 0;
   const needsApproval = numericAmount >= APPROVAL_THRESHOLD;
 
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result ?? "");
+        resolve(result.slice(result.indexOf(",") + 1));
+      };
+      reader.onerror = () => reject(new Error("Could not read the receipt file."));
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!receipt) {
@@ -96,61 +106,34 @@ function EmployeePage() {
     setFormError(null);
     setSubmitting(true);
 
-    const ref = generateReference();
-
     try {
-      // 1. Upload the receipt and build a shareable link.
-      let receiptUrl: string | null = null;
-      const safeName = receipt.name.replace(/[^\w.\-]+/g, "_");
-      const path = `${ref}/${safeName}`;
-      const upload = await supabase.storage
-        .from("receipts")
-        .upload(path, receipt, { upsert: true, contentType: receipt.type });
-      if (upload.error) throw upload.error;
+      const dataBase64 = await fileToBase64(receipt);
 
-      const signed = await supabase.storage
-        .from("receipts")
-        .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
-      receiptUrl = signed.data?.signedUrl ?? null;
-
-      // 2. Save the claim to the database.
-      const record = {
-        reference: ref,
-        employee_name: fullName,
-        employee_email: email,
-        department,
-        vendor,
-        amount: numericAmount,
-        purpose: description,
-        payment_method: paymentMethod,
-        project_client: project,
-        additional_notes: notes,
-        expense_date: date,
-        receipt_url: receiptUrl,
-        status: "pending",
-        requires_approval: needsApproval,
-      };
-
-      const { error: insertError } = await supabase.from("expenses").insert(record);
-      if (insertError) throw insertError;
-
-      // 3. Notify Make with every field, including the receipt link.
-      try {
-        await fetch(YOUR_MAKE_WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...record,
-            receipt_name: receipt.name,
-            submitted_at: new Date().toISOString(),
-          }),
-        });
-      } catch (webhookError) {
-        console.error("Make webhook failed", webhookError);
-      }
+      // Validated server pipeline: uploads the receipt, saves the claim and
+      // notifies Make. The browser never writes to the database directly.
+      const result = await submitExpense({
+        data: {
+          fullName,
+          email,
+          department,
+          expenseDate: date,
+          vendor,
+          amount: numericAmount,
+          purpose: description,
+          paymentMethod,
+          projectClient: project || undefined,
+          additionalNotes: notes || undefined,
+          receipt: {
+            name: receipt.name,
+            contentType: receipt.type || "application/octet-stream",
+            size: receipt.size,
+            dataBase64,
+          },
+        },
+      });
 
       const local: LocalSubmission = {
-        reference: ref,
+        reference: result.reference,
         title: vendor || description.slice(0, 40) || "Expense claim",
         amount: numericAmount,
         department,
@@ -160,10 +143,14 @@ function EmployeePage() {
       const next = [local, ...readLocal()].slice(0, 25);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       setSubmissions(next);
-      setReference(ref);
+      setReference(result.reference);
     } catch (err) {
       console.error("Failed to submit expense", err);
-      setFormError("We couldn't send your expense. Please check your connection and try again.");
+      const message =
+        err instanceof Error && err.message && !err.message.includes("fetch")
+          ? err.message
+          : "We couldn't send your expense. Please check your connection and try again.";
+      setFormError(message);
     } finally {
       setSubmitting(false);
     }
