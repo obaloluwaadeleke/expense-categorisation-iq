@@ -4,14 +4,12 @@ import { useEffect, useState } from "react";
 
 import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
-import { supabase } from "@/integrations/supabase/client";
+import { submitExpense } from "@/lib/expense-submit.functions";
 import {
   APPROVAL_THRESHOLD,
   DEPARTMENTS,
   PAYMENT_METHODS,
-  YOUR_MAKE_WEBHOOK_URL,
   formatNaira,
-  generateReference,
   type Department,
   type PaymentMethod,
 } from "@/lib/expense-data";
