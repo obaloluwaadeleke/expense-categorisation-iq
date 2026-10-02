@@ -27,12 +27,18 @@ import {
   YAxis,
 } from "recharts";
 
-import { AdminShell } from "@/components/expense/AdminShell";
+import { AppShell } from "@/components/expense/AppShell";
 import { StatusBadge } from "@/components/expense/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
-import { APPROVAL_THRESHOLD, formatNaira, type Expense, type Status } from "@/lib/expense-data";
+import {
+  APPROVAL_THRESHOLD,
+  formatNaira,
+  needsManagerDecision,
+  type Expense,
+  type Status,
+} from "@/lib/expense-data";
 
 // Department slices beyond the five chart tokens are grouped into "Other".
 const SLICE_COLORS = [
@@ -115,7 +121,8 @@ export function AdminDashboard({
     const lastMonth = monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
     const spendIn = (key: string) =>
       expenses.filter((e) => e.date.startsWith(key)).reduce((a, e) => a + e.amount, 0);
-    const pending = expenses.filter((e) => e.status === "Pending");
+    // Only claims that actually wait on a manager (see needsManagerDecision).
+    const pending = expenses.filter(needsManagerDecision);
     const approved = expenses.filter((e) => e.status === "Approved");
     const rejected = expenses.filter((e) => e.status === "Rejected");
     const decided = approved.length + rejected.length;
@@ -211,7 +218,7 @@ export function AdminDashboard({
   }, [expenses]);
 
   const aiFlagged = stats.pending.filter((e) => e.aiRecommendation).slice(0, 3);
-  const highValue = stats.pending.filter((e) => e.amount >= APPROVAL_THRESHOLD);
+  const highValue = stats.pending;
 
   const filtered = useMemo(
     () =>
@@ -229,7 +236,7 @@ export function AdminDashboard({
   const exportRecords = () => window.alert("Export coming soon.");
 
   return (
-    <AdminShell pendingCount={stats.pending.length}>
+    <AppShell>
       <div className="mb-6">
         <h1 className="break-words text-2xl font-semibold tracking-tight text-foreground">
           {greeting}
@@ -254,11 +261,11 @@ export function AdminDashboard({
           />
           <Stat
             icon={<Clock className="h-4 w-4" />}
-            label="Pending claims"
+            label="Awaiting approval"
             loading={isLoading}
             value={String(stats.pending.length)}
             tone="pending"
-            footnote={`${formatNaira(stats.pendingAmount)} awaiting review`}
+            footnote={`${formatNaira(stats.pendingAmount)} · claims of ${formatNaira(APPROVAL_THRESHOLD)}+`}
           />
           <Stat
             icon={<CheckCircle2 className="h-4 w-4" />}
@@ -615,7 +622,7 @@ export function AdminDashboard({
           </div>
         </section>
       </div>
-    </AdminShell>
+    </AppShell>
   );
 }
 
@@ -721,17 +728,16 @@ function QuickAction({
 }
 
 function RowAction({ expense }: { expense: Expense }) {
-  const label =
-    expense.status === "Pending"
-      ? "Review"
-      : expense.status === "Needs Clarification"
-        ? "Clarify"
-        : "View";
+  const label = needsManagerDecision(expense)
+    ? "Review"
+    : expense.status === "Needs Clarification"
+      ? "Clarify"
+      : "View";
   return (
     <Button
       asChild
       size="sm"
-      variant={expense.status === "Pending" ? "default" : "outline"}
+      variant={needsManagerDecision(expense) ? "default" : "outline"}
       className="h-9"
     >
       <Link to="/manager/$id" params={{ id: expense.id }}>

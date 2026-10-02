@@ -7,7 +7,7 @@ import { AiBadge, HighBadge } from "@/components/expense/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { useRequireRole } from "@/hooks/useAuth";
 import { decideExpense, listExpenses } from "@/lib/expenses.functions";
-import { APPROVAL_THRESHOLD, formatNaira } from "@/lib/expense-data";
+import { APPROVAL_THRESHOLD, formatNaira, needsManagerDecision } from "@/lib/expense-data";
 
 export const Route = createFileRoute("/manager/")({
   head: () => ({
@@ -51,7 +51,7 @@ function ManagerQueue() {
     queryFn: () => fetchExpenses({ data: undefined }),
   });
 
-  const pending = (expensesQuery.data?.expenses ?? []).filter((e) => e.status === "Pending");
+  const pending = (expensesQuery.data?.expenses ?? []).filter(needsManagerDecision);
 
   return (
     <AppShell
@@ -59,12 +59,12 @@ function ManagerQueue() {
       subtitle={
         expensesQuery.isLoading
           ? "Loading claims…"
-          : `${pending.length} pending claims awaiting your decision.`
+          : `${pending.length} ${pending.length === 1 ? "claim" : "claims"} of ${formatNaira(APPROVAL_THRESHOLD)}+ awaiting your decision. Smaller claims are handled automatically.`
       }
     >
       {decideMutation.isError ? (
         <p className="mb-4 rounded-md bg-secondary px-4 py-3 text-sm text-destructive">
-          We couldn't save that decision. Please try again.
+          We couldn't save that decision: {decideMutation.error.message}
         </p>
       ) : null}
 

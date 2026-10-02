@@ -88,7 +88,9 @@ function ExpenseDetail() {
       setTimeout(() => navigate({ to: "/manager" }), 1200);
     } catch (err) {
       console.error("Failed to save decision", err);
-      setError("We couldn't save that decision. Please try again.");
+      setError(
+        `We couldn't save that decision: ${err instanceof Error ? err.message : "please try again."}`,
+      );
     } finally {
       setSaving(false);
     }

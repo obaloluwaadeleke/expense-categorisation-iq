@@ -66,6 +66,14 @@ export interface Expense {
 
 
 
+// Claims below APPROVAL_THRESHOLD are handled end-to-end by the Make intake
+// scenario; only pending claims at or above it wait for a manager or admin.
+// Used by the approval queue, the sidebar badge and the admin dashboard so
+// they always count the same claims.
+export function needsManagerDecision(expense: Expense) {
+  return expense.status === "Pending" && expense.amount >= APPROVAL_THRESHOLD;
+}
+
 export function formatNaira(amount: number) {
   return "₦" + amount.toLocaleString("en-NG", { maximumFractionDigits: 2 });
 }
