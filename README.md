@@ -8,17 +8,8 @@ Manager: Approval Queue cards for pending expenses, with submitter, title, amoun
 
 Admin dashboard: Total Spend, Total Approved, Total Rejected, Total Pending stat cards; simple category breakdown chart; approval-rate percentage; complete searchable records table with all statuses; export button placeholder. Keep all webhook URLs easily configurable as constants at top of relevant files. UI must be functional entirely on mock JSON prior to connecting webhooks.
 
-This project was built with [Lovable](https://lovable.dev).
 
 **Live app**: https://expense-categorisation-iq.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/23e5f1a9-3fe1-4264-9e4c-6d9129cd0f97).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
 
 ## Development
 
