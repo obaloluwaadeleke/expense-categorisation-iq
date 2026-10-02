@@ -110,13 +110,20 @@ export const submitExpense = createServerFn({ method: "POST" })
     // Non-critical: the claim is already saved, so a missing secret or failed
     // webhook is logged but never fails the employee's submission.
     const makeWebhookUrl = process.env["MAKE_WEBHOOK_URL"];
+    // Matches the API key set on the webhook in Make, so a leaked webhook URL is
+    // useless on its own. Only sent when configured, so the secret can be added
+    // here before Make starts requiring it.
+    const makeWebhookApiKey = process.env["MAKE_WEBHOOK_API_KEY"];
     try {
       if (!makeWebhookUrl) {
         console.error("Make webhook skipped: MAKE_WEBHOOK_URL secret is not configured.");
       } else {
         const response = await fetch(makeWebhookUrl, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(makeWebhookApiKey ? { "x-make-apikey": makeWebhookApiKey } : {}),
+          },
           body: JSON.stringify({
             ...record,
             receipt_name: data.receipt.name,
