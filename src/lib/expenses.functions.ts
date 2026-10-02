@@ -2,11 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-import {
-  AIRTABLE_BASE_ID,
-  AIRTABLE_EXPENSES_TABLE,
-  AIRTABLE_FIELDS,
-} from "./airtable-config";
+import { AIRTABLE_BASE_ID, AIRTABLE_EXPENSES_TABLE, AIRTABLE_FIELDS } from "./airtable-config";
 import { type Expense, type Status } from "./expense-data";
 
 export type AppRole = "admin" | "manager" | "employee";
@@ -51,8 +47,7 @@ export function toStatus(value: unknown): Status {
   const raw = String(value ?? "").toLowerCase();
   if (raw === "approved") return "Approved";
   if (raw === "rejected" || raw === "declined") return "Rejected";
-  if (raw === "needs_clarification" || raw === "needs clarification")
-    return "Needs Clarification";
+  if (raw === "needs_clarification" || raw === "needs clarification") return "Needs Clarification";
   return "Pending";
 }
 
@@ -97,22 +92,17 @@ const SELECT_COLUMNS =
   "id, reference, employee_name, employee_email, department, vendor, amount, purpose, payment_method, project_client, additional_notes, expense_date, receipt_url, status, requires_approval, ai_summary, ai_reviewer_note, manager_comment, approved_by, submitted_at";
 
 async function resolveIdentity(context: AuthContext) {
-  const { data: roleRows } = await context.supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", context.userId);
+  // Independent lookups: run them together rather than back to back.
+  const [{ data: roleRows }, { data: profile }] = await Promise.all([
+    context.supabase.from("user_roles").select("role").eq("user_id", context.userId),
+    context.supabase.from("profiles").select("email").eq("id", context.userId).maybeSingle(),
+  ]);
   const roles = ((roleRows ?? []) as { role: AppRole }[]).map((r) => r.role);
   const role: AppRole = roles.includes("admin")
     ? "admin"
     : roles.includes("manager")
       ? "manager"
       : "employee";
-
-  const { data: profile } = await context.supabase
-    .from("profiles")
-    .select("email")
-    .eq("id", context.userId)
-    .maybeSingle();
 
   const email = String(
     (profile as { email?: string } | null)?.email ?? context.claims["email"] ?? "",
@@ -242,3 +232,41 @@ export const decideExpense = createServerFn({ method: "POST" })
     return { updated: true, reference, status: data.decision, source: "airtable" as const };
   });
 
+// ---------------------------------------------------------------------------
+// AI categories — managers and admins only.
+// The expenses table has no category column: Make writes the AI category to
+// Airtable. Returns reference -> category so the dashboard can join it onto
+// the Supabase records. Fetched separately so a slow Airtable call never holds
+// up the rest of the dashboard.
+// ---------------------------------------------------------------------------
+export const listExpenseCategories = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const ctx = context as unknown as AuthContext;
+    const { role } = await resolveIdentity(ctx);
+    if (role !== "manager" && role !== "admin") {
+      throw new Error("Forbidden: only managers and admins can read categories.");
+    }
+
+    const table = encodeURIComponent(AIRTABLE_EXPENSES_TABLE);
+    const fields = ["Reference", AIRTABLE_FIELDS.aiCategory]
+      .map((f) => `fields%5B%5D=${encodeURIComponent(f)}`)
+      .join("&");
+    const categories: Record<string, string> = {};
+    let offset: string | undefined;
+    do {
+      const page = await airtableRequest(
+        `/v0/${AIRTABLE_BASE_ID}/${table}?pageSize=100&${fields}${offset ? `&offset=${encodeURIComponent(offset)}` : ""}`,
+      );
+      for (const record of page?.records ?? []) {
+        const reference = record?.fields?.["Reference"];
+        const category = record?.fields?.[AIRTABLE_FIELDS.aiCategory];
+        if (typeof reference === "string" && typeof category === "string" && category.trim()) {
+          categories[reference] = category.trim();
+        }
+      }
+      offset = page?.offset;
+    } while (offset);
+
+    return { categories };
+  });
